@@ -37,12 +37,12 @@ describe('transmission', () => {
   const expect = chai.expect
   let transmission
 
-  const sampleUrl = 'http://releases.ubuntu.com/18.04/ubuntu-18.04.2-desktop-amd64.iso.torrent'
-  const sampleHash = 'c3c5fe05c329ae51c6eca464f6b30ba0a457b2ca'
+    const sampleUrl = 'http://releases.ubuntu.com/18.04/ubuntu-18.04.4-desktop-amd64.iso.torrent'
+    const sampleHash = '286d2e5b4f8369855328336ac1263ae02a7a60d5'
 
   chai.config.includeStack = true
 
-  /*  afterEach(done => {
+  afterEach(done => {
     transmission.get().then(res => {
       async.each(res.torrents, (torrent, callback) => {
         if (torrent.hashString !== sampleHash) {
@@ -54,7 +54,7 @@ describe('transmission', () => {
         done(err);
       })
     })
-  }); */
+  });
 
   it('can instantiate a new instance', done => {
     try {
