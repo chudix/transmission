@@ -13,7 +13,6 @@ if (!fs.existsSync(path.resolve('tmp'))) {
 
 const Transmission = require('../')
 const clientOptions = {}
-
 if (process.env.PORT) {
   clientOptions.port = process.env.PORT
 }
@@ -32,6 +31,8 @@ if (process.env.URL) {
   clientOptions.url = process.env.URL
 }
 
+// Test will be done on localhost:9091/transmission/rpc
+// TODO: use a container ?
 describe('transmission', () => {
   const chai = require('chai')
   const expect = chai.expect
@@ -41,20 +42,6 @@ describe('transmission', () => {
     const sampleHash = '286d2e5b4f8369855328336ac1263ae02a7a60d5'
 
   chai.config.includeStack = true
-
-  afterEach(done => {
-    transmission.get().then(res => {
-      async.each(res.torrents, (torrent, callback) => {
-        if (torrent.hashString !== sampleHash) {
-          return callback();
-        }
-
-        transmission.remove(torrent.id, true).then(() => done())
-      }, err => {
-        done(err);
-      })
-    })
-  });
 
   it('can instantiate a new instance', done => {
     try {
@@ -77,10 +64,55 @@ describe('transmission', () => {
       expect(transmission.status.ISOLATED).to.equal(7)
     })
   })
-
   describe('methods', function () {
-    this.timeout(30000)
+      this.timeout(30000)
+      describe('Torrent adding methods', function () {
+          // after each test is performed remove the added torrent
+          afterEach(done => {
+              transmission.get().then(res => {
+                  async.each(res.torrents, (torrent, callback) => {
+                      if (torrent.hashString !== sampleHash) {
+                          return callback();
+                      }
 
+                      transmission.remove(torrent.id, true).then(() => done())
+                  }, err => {
+                      done(err);
+                  })
+              })
+          });
+          it('should add torrent from file path', done => {
+              http.get(sampleUrl, response => {
+                  const transmission = new Transmission(clientOptions)
+                  const destination = path.resolve('tmp', path.basename(sampleUrl))
+                  const writeStream = fs.createWriteStream(destination)
+                  response.pipe(writeStream)
+                  response.on('error', done)
+                  response.on('end', () => {
+                      transmission.addFile(destination).then(info => {
+                          if (!info || !info.id) {
+                              return done(new Error('Add torrent failure'))
+                          }
+                          done()
+                      }).catch(done)
+                  })
+              })
+          })
+          
+          it('should add torrent from url', function (done) {
+              transmission.addUrl(sampleUrl).then(info => {
+                  console.log("addUrl response", info)
+                  th = info.id
+                  return transmission.get(info.id)
+              }).then(got => {
+                  if (got.torrents.length === 0) {
+                      done(new Error('add torrent failure'))
+                  }
+
+                  done()
+              }).catch(done)
+          })
+      })
     it.skip('should set properties', done => {
       done()
     })
@@ -99,51 +131,7 @@ describe('transmission', () => {
       }).catch(done)
     })
 
-    it('should add torrent from file path', done => {
-      http.get(sampleUrl, response => {
-        const transmission = new Transmission(clientOptions)
-        const destination = path.resolve('tmp', path.basename(sampleUrl))
-        const writeStream = fs.createWriteStream(destination)
-        response.pipe(writeStream)
-        response.on('error', done)
-        response.on('end', () => {
-          transmission.addFile(destination).then(info => {
-            if (!info || !info.id) {
-              return done(new Error('Add torrent failure'))
-            }
-            done()
-          }).catch(done)
-        })
-      })
-    })
 
-    it('should add torrent from url', function (done) {
-      transmission.addUrl(sampleUrl).then(info => {
-        return transmission.get(info.id)
-      }).then(got => {
-        if (got.torrents.length === 0) {
-          done(new Error('add torrent failure'))
-        }
-
-        done()
-      }).catch(done)
-    })
-
-    it('should rename the torrent', function (done) {
-      const newName = 'windows-10-installer.exe'
-
-      transmission.addUrl(sampleUrl).then(info => {
-        return transmission.rename(info.id, info.name, newName)
-      }).then(info => {
-        return transmission.get(info.id)
-      }).then(got => {
-        if (newName !== got.torrents[0].name) {
-          return done(new Error('rename torrent failure'))
-        }
-
-        done()
-      }).catch(done)
-    })
 
     it.skip('should stop all torrents', done => {
       transmission.addUrl(sampleUrl).then(info => {
