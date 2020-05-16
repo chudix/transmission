@@ -65,7 +65,7 @@ describe('transmission', () => {
     }
   })
 
-  describe('status definition', () => {
+  describe('status definition is the used by RPC spec', () => {
     it('should have correct status', () => {
       expect(transmission.status.STOPPED).to.equal(0)
       expect(transmission.status.CHECK_WAIT).to.equal(1)
