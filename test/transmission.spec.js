@@ -145,7 +145,7 @@ describe('transmission', () => {
       }).catch(done)
     })
 
-    it('should stop all torrents', done => {
+    it.skip('should stop all torrents', done => {
       transmission.addUrl(sampleUrl).then(info => {
         return transmission.waitForState(info.id, 'DOWNLOAD')
       }).then(info => {
@@ -171,7 +171,7 @@ describe('transmission', () => {
       }).catch(done)
     })
 
-    it('should stop a torrent', done => {
+    it.skip('should stop a torrent', done => {
       transmission.get().then(info => {
         transmission.stop(info.torrents[0].id).then(info => {
           done()
