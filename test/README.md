@@ -40,3 +40,18 @@ Since all that configurations are handled by the modem part of dockerode. You ma
 [modem-docker](https://github.com/apocas/docker-modem#readme) for options.
 
 
+## Enviromental variables.
+
+[dotenv](https://www.npmjs.com/package/dotenv) is available. So if you dont want to pollute your
+environment you can use a .env file in the test folder.
+
+### Image and container variables
+
+| Name                           | description                  | default                               |
+| ---                            | ---                          | --                                    |
+| IMAGE\_NAME                    | name of the image to use     | linuxserver/transmission:2.94-r3-ls53 |
+| CONTAINER\_NAME                | name of the container        | transmission-promise-testing          |
+| TRANSMISSION\_HOST\_RPC\_PORT  | port to bind rpc in the host | 9091                                  |
+| TRANSMISSION\_HOST\_PEER\_PORT | port to bind transmission    | 50143                                 |
+|                                | peer on the host             |                                       |
+
