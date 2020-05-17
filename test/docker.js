@@ -41,14 +41,26 @@ const CONTAINER_OPTIONS = {
     }
 };
 
-
-console.log(CONTAINER_OPTIONS.HostConfig.PortBindings);
-
-process.exit()
+const DOCKER_OPTIONS = {
+    socketPath: process.env.SOCKET_PATH || '/var/run/docker.sock',
+    port: process.env.PORT,
+    username: process.env.USERNAME,
+    password: process.env.PASSWORD,
+    version: process.env.VERSION,
+    key: process.env.KEY,
+    cert: process.env.CERT,
+    ca: process.env.CA,
+    timeout: process.env.TIMEOUT,
+    connectionTimeout: process.env.CONNECTION_TIMEOUT,
+    checkServerIdentity: process.env.CHECK_SERVER_IDENTITY,
+    agent: process.env.AGENT,
+    agentForward: process.env.AGENT_FORWARD,
+    sshAuthAgent: process.env.SSH_AUTH_AGENT,
+}
 
 var Docker = require('dockerode');
-var docker = new Docker();
-                                                
+var docker = new Docker(DOCKER_OPTIONS);
+
 // TODO: use api errors(when possible) and catch to get rid of conditionals and nested calls
 docker.listContainers({all:true, filters: {"name":[CONTAINER_NAME]}})
     .then(containers => {
