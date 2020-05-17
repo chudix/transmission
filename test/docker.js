@@ -5,10 +5,12 @@ const TRANSMISSION_IMAGE_NAME = "linuxserver/transmission";
 const TRANSMISSION_IMAGE_TAG = "2.94-r3-ls53"
 const IMAGE_NAME = `${TRANSMISSION_IMAGE_NAME}:${TRANSMISSION_IMAGE_TAG}`
 const CONTAINER_NAME = "transmission-promise-testing"
+const TRANSMISSION_HOST_RPC_PORT = "9091"
+const TRANSMISSION_HOST_PEER_PORT = "50143"
 
 const CONTAINER_OPTIONS = {
-    name: CONTAINER_NAME,
-    Image: IMAGE_NAME,
+    name: process.env.CONTAINER_NAME || CONTAINER_NAME,
+    Image: process.env.IMAGE_NAME || IMAGE_NAME,
     Env: [
         `PUID=${USER_INFO.uid}`,
         `PGID=${USER_INFO.gid}`,
@@ -31,15 +33,18 @@ const CONTAINER_OPTIONS = {
             `${PWD}/transmission/volumes/watch:/watch`
         ],
         PortBindings: {
-            "9091/tcp": [{"HostPort":"9091"}],
-            "50143/tcp": [{"HostPort":"50143/tcp"}],
-            "50143/udp": [{"HostPort":"50143/udp"}],
+            "9091/tcp": [{"HostPort":`${process.env.TRANSMISSION_HOST_RPC_PORT || TRANSMISSION_HOST_RPC_PORT}`}],
+            "50143/tcp": [{"HostPort":`${process.env.TRANSMISSION_HOST_PEER_PORT || TRANSMISSION_HOST_PEER_PORT}/tcp`}],
+            "50143/udp": [{"HostPort":`${process.env.TRANSMISSION_HOST_PEER_PORT || TRANSMISSION_HOST_PEER_PORT}/udp`}],
         },
         RestartPolicy: {Name: "unless-stopped"}
     }
 };
-    
 
+
+console.log(CONTAINER_OPTIONS.HostConfig.PortBindings);
+
+process.exit()
 
 var Docker = require('dockerode');
 var docker = new Docker();
