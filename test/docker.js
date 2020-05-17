@@ -43,8 +43,8 @@ const CONTAINER_OPTIONS = {
 
 var Docker = require('dockerode');
 var docker = new Docker();
-
-// TODO: use api error and catch to get rid of conditionals
+                                                
+// TODO: use api errors(when possible) and catch to get rid of conditionals and nested calls
 docker.listContainers({all:true, filters: {"name":[CONTAINER_NAME]}})
     .then(containers => {
         if (!!containers.length) {
@@ -65,14 +65,42 @@ docker.listContainers({all:true, filters: {"name":[CONTAINER_NAME]}})
                 .catch(error => console.log(error));
         } else {
             // if container does not exists it may be because image is not present
+            // check for image if present just create container and start it
+            //                 if not pull and create
             // create new container
-            console.log("Container not found... creating new one")
-            docker.createContainer(CONTAINER_OPTIONS)
-                .then(response => {
-                    console.log(`Created brand new container named ${CONTAINER_NAME}. Starting it...`)
-                    docker.getContainer(response.id).start()
+            console.log("Container not found. Checking for images...")
+            docker.listImages({filters: {"reference": [IMAGE_NAME]}})
+                .then(images => {
+                    if(!!images.length) {
+                        // image found -> create
+                        console.log("Image found.Creating container...")
+                        docker.createContainer(CONTAINER_OPTIONS)
+                            .then(response => {
+                                console.log("Created container. Starting it...")
+                                docker.getContainer(response.id).start()
+                                    .then(response => console.log("Started container"))
+                                    .catch(error => console.log(error));
+                            })
+                            .catch(error => console.log(error))
+                    }else {
+                        // no image found -> pull and create
+                        console.log("Image not found. Pulling and creating container...")
+                        docker.pull(IMAGE_NAME, (error, stream) => {
+                            docker.modem.followProgress(stream,(error, output) => {
+                                // onFinished streams
+                                console.log("Image pulled. Creating container")
+                                docker.createContainer(CONTAINER_OPTIONS)
+                                    .then(response => {
+                                        console.log("Created container. Starting it...")
+                                        docker.getContainer(response.id).start()
+                                            .then(response => console.log("Started container"))
+                                            .catch(error => console.log(error));
+                                    })
+                                    .catch(error => console.log(error))
+                            })
+                        })
+                    }
                 })
-                .catch(error => console.log(error))
         }
     })
-    .catch(error => console.log(error));
+    .catch(error => console.log(error))
