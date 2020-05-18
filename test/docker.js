@@ -208,3 +208,4 @@ class DockerManager {
         return this.removeContainer();
     }
 }
+module.exports = DockerManager;
