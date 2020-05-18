@@ -59,65 +59,152 @@ const DOCKER_OPTIONS = {
 }
 
 var Docker = require('dockerode');
-var docker = new Docker(DOCKER_OPTIONS);
 
-// TODO: use api errors(when possible) and catch to get rid of conditionals and nested calls
-docker.listContainers({all:true, filters: {"name":[CONTAINER_NAME]}})
-    .then(containers => {
-        if (!!containers.length) {
-            // Container already exists.
-            console.log("container exists...killing and removing");
-            // get container -> then remove it -> then create a new one
-            docker.getContainer(containers[0].Id)
-                .remove({force: true})
-                .then(response => {
-                    console.log("removed container... creating a new one");
-                    docker.createContainer(CONTAINER_OPTIONS)
-                        .then(response => {
-                            console.log(`Created brand new container named ${CONTAINER_NAME}. Starting it...`);
-                            docker.getContainer(response.id).start();
-                        })
-                        .catch(error => console.log(error));
+class DockerManager {
+    /**
+     * Represents a docker instance and container manager.
+     * It has the responsibility to creation, removal
+     * and setup of containers to prepare ground for
+     * testing scripts.
+     */
+    constructor() {
+        this.docker = new Docker(DOCKER_OPTIONS);
+        this.currentContainer = undefined;
+
+    }
+
+    initialize() {
+        /**
+         * Initializes DockerManager instance. That means:
+         *   - If no source image is present -> Fetches it.
+         *   - If another container with CONTAINER_NAME is present -> wipe out
+         *   - Creates the container
+         *   - Finally starts it.
+         * @return {Promise} Holding the reponse from the docker api.
+         */
+        return this.createContainer()
+            .catch(error => {
+                if (error.statusCode == 404 && error.json.message.split(':')[0] == 'No such image')
+                {
+                    // image doesnt exists. Pull image, create container and start it
+                    console.log("-> Image not found.");
+                    return this.getImage().then(response => this.createContainer())
+                }
+                else if (error.statusCode == 409)
+                {
+                    // container with CONTAINER_NAME exists
+                    let containerId = this.getContainerIdFromError(error);
+                    console.log(`-> Found ${CONTAINER_NAME}:${containerId}`)
+                    this.setCurrentContainer(this.getContainerIdFromError(error));
+                    return this.removeContainer().then(response => this.createContainer())
+                }
+                else
+                {
+                    // another error arised. Log it
+                    return console.log(error)
+                }
+            })
+            .finally( _ => this.startContainer());
+    }
+    
+    resetCurrentContainer() {
+        /**
+         * Resets current container prop
+         */
+        this.currentContainer = undefined
+    }
+
+    removeContainer() {
+        /**
+         * Removes current container and reset currentContainer
+         * @return {Promise} response from dockerode method remove.
+         *   wich is the response of docker api
+         */
+        console.log(`Removing ${CONTAINER_NAME}: ${this.currentContainer.id}`)
+        return this.currentContainer.remove({force:true}).then(response => {
+            this.resetCurrentContainer();
+            return response;
+        })
+    }
+
+    createContainer() {
+        /**
+         * Creates a container based on CONTAINER_OPTIONS.
+         * @return {Promise} Passes along response from dockerode
+         *   createContainer method wich is the reponse from docker api.
+         */
+        console.log(`Creating pristine new container named ${CONTAINER_NAME}`)
+        return this.docker
+            .createContainer(CONTAINER_OPTIONS)
+            .then(response => {
+                this.setCurrentContainer(response.id)
+                return response
+            })
+        
+    }
+
+    getImage() {
+        /**
+         * Used to pull an image from the internet. Uses dockerode method.
+         * @return {Promise} A promise resolved when streaming finishes
+         *   [refer to dockerode docs for docker.modem.followProgress]
+         */
+        console.log(`Pulling image ${IMAGE_NAME}...`);
+        return new Promise((resolve, reject) => {
+            this.docker.pull(IMAGE_NAME, (error, stream) => {
+                this.docker.modem.followProgress(stream,(error, output) => {
+                    // onFinished streams resolve promise to continue execution
+                    resolve(true);
                 })
-                .catch(error => console.log(error));
-        } else {
-            // if container does not exists it may be because image is not present
-            // check for image if present just create container and start it
-            //                 if not pull and create
-            // create new container
-            console.log("Container not found. Checking for images...")
-            docker.listImages({filters: {"reference": [IMAGE_NAME]}})
-                .then(images => {
-                    if(!!images.length) {
-                        // image found -> create
-                        console.log("Image found.Creating container...")
-                        docker.createContainer(CONTAINER_OPTIONS)
-                            .then(response => {
-                                console.log("Created container. Starting it...")
-                                docker.getContainer(response.id).start()
-                                    .then(response => console.log("Started container"))
-                                    .catch(error => console.log(error));
-                            })
-                            .catch(error => console.log(error))
-                    }else {
-                        // no image found -> pull and create
-                        console.log("Image not found. Pulling and creating container...")
-                        docker.pull(IMAGE_NAME, (error, stream) => {
-                            docker.modem.followProgress(stream,(error, output) => {
-                                // onFinished streams
-                                console.log("Image pulled. Creating container")
-                                docker.createContainer(CONTAINER_OPTIONS)
-                                    .then(response => {
-                                        console.log("Created container. Starting it...")
-                                        docker.getContainer(response.id).start()
-                                            .then(response => console.log("Started container"))
-                                            .catch(error => console.log(error));
-                                    })
-                                    .catch(error => console.log(error))
-                            })
-                        })
-                    }
-                })
-        }
-    })
-    .catch(error => console.log(error))
+            })
+        })
+    }
+
+    startContainer() {
+        /**
+         * Starts the container stored on currentContainer
+         * @return {Promise} response from docker api start
+         */
+        console.log(`Starting container ${CONTAINER_NAME}`)
+        return this.currentContainer.start()
+    }
+
+    setCurrentContainer(id) {
+        /**
+         * Set current container based on a container id.
+         * @param {string} docker container id.
+         * @return void
+         */
+        this.currentContainer = this.getContainer(id);
+    }
+
+    getCurrentContainer() {
+        return this.currentContainer;
+    }
+    
+    getContainer(id) {
+        /**
+         * @param {string} docker container id
+         * @return {object} dockerode representation of a container
+         *   named CONTAINER_NAME
+         */
+        return this.docker.getContainer(id);
+    }
+
+    getContainerIdFromError(error) {
+        /**
+         * Extract container id from docker api error message.
+         * @param {Object} An error object returned by the docker api.
+         * @return {string} docker container id
+         */
+        return error.json.message.split('.')[1].split(' ').pop().replace(/"/g,'');
+    }
+
+    wipeout() {
+        /**
+         * Removes current container from sistem.
+         * Intended to use from outside the class before destroy.
+         */
+        return this.removeContainer();
+    }
+}
