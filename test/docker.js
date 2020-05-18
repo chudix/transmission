@@ -1,6 +1,6 @@
 require('dotenv').load();
 const USER_INFO = require('os').userInfo();
-const PWD = process.env.PWD;
+const CWD = __dirname;
 const TRANSMISSION_IMAGE_NAME = "linuxserver/transmission";
 const TRANSMISSION_IMAGE_TAG = "2.94-r3-ls53"
 const IMAGE_NAME = `${TRANSMISSION_IMAGE_NAME}:${TRANSMISSION_IMAGE_TAG}`
@@ -28,9 +28,9 @@ const CONTAINER_OPTIONS = {
     },
     HostConfig: {
         Binds: [
-            `${PWD}/transmission/volumes/config:/config`,
-            `${PWD}/transmission/volumes/downloads:/downloads`,
-            `${PWD}/transmission/volumes/watch:/watch`
+            `${CWD}/transmission/volumes/config:/config`,
+            `${CWD}/transmission/volumes/downloads:/downloads`,
+            `${CWD}/transmission/volumes/watch:/watch`
         ],
         PortBindings: {
             "9091/tcp": [{"HostPort":`${process.env.TRANSMISSION_HOST_RPC_PORT || TRANSMISSION_HOST_RPC_PORT}`}],
