@@ -30,7 +30,8 @@ const CONTAINER_OPTIONS = {
         Binds: [
             `${CWD}/transmission/volumes/config:/config`,
             `${CWD}/transmission/volumes/downloads:/downloads`,
-            `${CWD}/transmission/volumes/watch:/watch`
+            `${CWD}/transmission/volumes/watch:/watch`,
+            `${CWD}/rpc_healthcheck.sh:/rpc_healthcheck.sh`
         ],
         PortBindings: {
             "9091/tcp": [{"HostPort":`${process.env.TRANSMISSION_HOST_RPC_PORT || TRANSMISSION_HOST_RPC_PORT}`}],
@@ -104,9 +105,19 @@ class DockerManager {
                     return console.log(error)
                 }
             })
-            .finally( _ => this.startContainer());
+            .then(response => {
+                return this.startContainer();
+            })
+            .then(response => {
+                
+                return this.transmissionRpcHealthcheck();
+            })
+            .then(response => {
+                console.log(response.message)
+                return response;
+            });
     }
-    
+
     resetCurrentContainer() {
         /**
          * Resets current container prop
@@ -139,7 +150,7 @@ class DockerManager {
             .then(response => {
                 this.setCurrentContainer(response.id)
                 return response
-            })
+            });
         
     }
 
@@ -155,9 +166,9 @@ class DockerManager {
                 this.docker.modem.followProgress(stream,(error, output) => {
                     // onFinished streams resolve promise to continue execution
                     resolve(true);
-                })
-            })
-        })
+                });
+            });
+        });
     }
 
     startContainer() {
@@ -207,5 +218,45 @@ class DockerManager {
          */
         return this.removeContainer();
     }
+
+    transmissionRpcHealthcheck() {
+        /**
+         * Performs a healthcheck on current container's 
+         * transmission service.
+         * It executes script rpc_healthcheck and waits
+         * for exit. (See script for details)
+         * @return {Promise<{rpc:<boolean>, message:<string>>}
+         *   rpc -> state of transmission rpc.
+         *   message -> representation of rpc
+         */
+        return new Promise((resolve,reject)=> {
+            // execute script on container
+            this.currentContainer.exec(
+                {Cmd: ['bash','rpc_healthcheck.sh'], AttachStdin: true, AttachStdout:true},
+                (error,exec)=> {
+                    // start execution
+                    exec.start((error,stream) => {
+                        // show stream on stdout
+                        stream.pipe(process.stdout);
+                        // streams end -> script ended.
+                        stream.on('end', () => {
+                            // get execution state and resolve
+                            // promise
+                            exec.inspect((error,data)=> {
+                                // Exitcode is a linux like process code
+                                // sucess: 0; error: other
+
+                                resolve({
+                                    rpc:!data.Exitcode,
+                                    message: `Rpc is ${!data.ExitCode? 'up and running':'down'}`
+                                });
+                            });
+                        });
+                    });
+                });
+        });
+    }
 }
+// let dm = new DockerManager();
+// dm.initialize();
 module.exports = DockerManager;
