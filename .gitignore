@@ -9,3 +9,6 @@ tmp
 .vscode
 example.js
 .idea
+test/transmission/volumes/watch/*
+test/transmission/volumes/downloads/*
+test/transmission/volumes/config/*
