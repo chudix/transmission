@@ -77,9 +77,6 @@ function cleanUpEnvironment() {
     }
 }
 
-
-
-
 let containerManager = new DockerManager();
 describe('transmission', () => {
     const chai = require('chai');
@@ -152,25 +149,30 @@ describe('transmission', () => {
     describe('methods',function() {
         describe('#get', function() {
             this.timeout(30000);
-            // Before each test call method. Avoid test polluting
-            let torrentList;
-            beforeEach(done => {
+            it('returns an array', done => {
                 transmission.get()
-                    .then(response => {
-                        torrentList = response.torrents;
-                    })
-                    .catch(done);
-            })
-            
-            it('should return an array', done => {
-                expect(torrentList).to.be.an('array');
+                    .then(r => {
+                        expect(r.torrents).to.be.an('array');
+                        done()
+                    }).catch(done)
             });
-            //@TODO Should return all props in current spec
+
+            it('returns current amount of torrents', done => {
+                // currently it should be one torrent(the sample one)
+                transmission.get().then(r => {
+                    expect(r.torrents.length).to.equal(1);
+                    done()
+                }).catch(done)
+            })
+
+            it.skip('returns all torrent props in current spec' done => {
+                //@TODO Should return all props in current spec
+            });
+
+            it.skip('returns only specified fields in get call', done => {}) 
             
-            // @TODOreturns correct amount of torrents
-            
-            // it will be used later for checking add
-        });
+
+        }); //<- #get
 
         describe('#addFile', function() {
             // after each test is performed remove the added torrent
