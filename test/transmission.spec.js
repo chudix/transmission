@@ -165,7 +165,7 @@ describe('transmission', () => {
                 }).catch(done)
             })
 
-            it.skip('returns all torrent props in current spec' done => {
+            it.skip('returns all torrent props in current spec', done => {
                 //@TODO Should return all props in current spec
             });
 
@@ -173,11 +173,30 @@ describe('transmission', () => {
             
 
         }); //<- #get
+        describe('#remove', function() {
+            it('Can remove from list(no local data)', done => {
+                transmission.get()
+                    .then(response => {
+                        return transmission.remove([response.torrents.pop().id])
+                    })
+                    .then(response => {
+                        return transmission.get();
+                    })
+                    .then(response => {
+                        console.log(response);
+                        expect(response.torrents.length).to.equal(0);
+                        done();
+                    })
+                    .catch(done);
+            });
 
+            // TODO
+            it.skip('Can fully remove(local data included)', done => {})
+        });// <- #remove
         describe('#addFile', function() {
             // after each test is performed remove the added torrent
-            // from tranmission. Note: Test if removes works first
-            // and use it for all torrents.
+            // from tranmission.
+            // Note: remove method should work (tested above)
             afterEach(done => {
                 transmission.get().then(res => {
                     async.each(res.torrents, (torrent, callback) => {
