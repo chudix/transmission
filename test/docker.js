@@ -28,9 +28,9 @@ const CONTAINER_OPTIONS = {
     },
     HostConfig: {
         Binds: [
-            `${CWD}/transmission/volumes/config:/config`,
-            `${CWD}/transmission/volumes/downloads:/downloads`,
-            `${CWD}/transmission/volumes/watch:/watch`,
+            // `${CWD}/transmission/volumes/config:/config`,
+            // `${CWD}/transmission/volumes/downloads:/downloads`,
+            // `${CWD}/transmission/volumes/watch:/watch`,
             `${CWD}/rpc_healthcheck.sh:/rpc_healthcheck.sh`
         ],
         PortBindings: {
@@ -135,7 +135,7 @@ class DockerManager {
         return this.currentContainer.remove({force:true}).then(response => {
             this.resetCurrentContainer();
             return response;
-        })
+        });
     }
 
     createContainer() {
@@ -254,6 +254,29 @@ class DockerManager {
                         });
                     });
                 });
+        });
+    }
+
+    addTorrentByUrl(torrentUrl) {
+        /**
+         * Execute transmission-remote command on current container
+         * Shows stream on stdout and when streaming ends it resolves
+         */
+        return new Promise((resolve,reject) => {
+            this.currentContainer.exec(
+            {Cmd:['transmission-remote','-a',`${torrentUrl}`],
+             AttachStdin:true,
+             AttachStdout:true},
+            (error, exec)=>{
+                exec.start((error,stream)=>{
+                    stream.pipe(process.stdout);
+                    stream.on('end', () => {
+                        exec.inspect((error,data)=>{
+                            resolve(!data.ExitCode);
+                        });
+                    });
+                });
+            });
         });
     }
 }
