@@ -11,7 +11,7 @@ retries="5"
 while [ $retries -gt 0 -a $OUTPUT -ne 0 ]
 do
     echo "Trying to reach transmission rpc"
-    transmission-remote > /dev/null 2>&1
+    transmission-remote -i > /dev/null 2>&1
     OUTPUT=$?
     if [ $OUTPUT -ne 0 ]
     then
