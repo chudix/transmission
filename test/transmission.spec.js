@@ -34,7 +34,7 @@ if (process.env.URL) {
 const sampleUrl = 'http://releases.ubuntu.com/18.04/ubuntu-18.04.4-desktop-amd64.iso.torrent';
 const sampleHash = '286d2e5b4f8369855328336ac1263ae02a7a60d5';
 const tmpFilesDir = 'test/tmp';
-const torrentName = path.basename(sampleUrl);
+const torrentName = path.basename(sampleUrl).replace('.torrent', '');
 const torrentPath = path.resolve(tmpFilesDir,torrentName);
 
 function setupEnvironment() {
@@ -217,32 +217,17 @@ describe('transmission', () => {
                     done(err);
                 });
             });
-            
-            
-            describe('#addFile', function () {
-                const torrentFile = torrentPath;
-                // TODO: it returns what spec says it should
-                it.skip('Returns response as Rpc spec states', done => {})
-                // TODO: add a torrent and check if get returns it.
-                it.skip('Add torrent from file path', done => {})
-                
-            })
+            let addedTorrentId = 2;
             describe('#addUrl', function() {
-                // same as #addFile
                 const torrentUrl = sampleUrl
-                it.skip('Returns response as Rpc spec states', done => {
-                    transmission.addUrl(torrentUrl)
-                        .then(response => {
-                            // expect(response.id).to.be truthy
-                            done()
-                        })
-                        .catch(done);
-                })
-
-                it.skip('Adds torrent from url', done => {
+                // check if get returns the torrent added.
+                // Currently checks only for lenght because testing
+                // is done with just one torrent
+                it('Adds a torrent from url', done => {
 
                     transmission.addUrl(torrentUrl)
                         .then(response => {
+                            addedTorrentId++;
                             return transmission.get()
                         })
                         .then(response => {
@@ -251,7 +236,34 @@ describe('transmission', () => {
                         })
                         .catch(done)
                 })
+                it('Returns response as Rpc spec states', done => {
+                    const expected = {
+                        id: addedTorrentId,
+                        hashString: sampleHash,
+                        name: torrentName
+                    }
+                    transmission.addUrl(torrentUrl)
+                        .then(response => {
+                            expect(response).to.deep.equal(expected);
+                            addedTorrentId++;
+                            done();
+                        })
+                        .catch(done)
+                })
+
+                
             }) //<- #addUrl
+            
+            describe('#addFile', function () {
+                // NOTE: should use node streams? 
+                const torrentFile = torrentPath;
+                // TODO: it returns what spec says it should
+                it.skip('Returns response as Rpc spec states', done => {})
+                // TODO: add a torrent and check if get returns it.
+                it.skip('Add torrent from file path', done => {})
+                
+            })
+            
         })
     }); //methods
     
