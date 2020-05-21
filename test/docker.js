@@ -67,6 +67,7 @@ class DockerManager {
      * It has the responsibility to creation, removal
      * and setup of containers to prepare ground for
      * testing scripts.
+     * @TODO: implement verbosity.
      */
     constructor() {
         this.docker = new Docker(DOCKER_OPTIONS);
@@ -257,14 +258,15 @@ class DockerManager {
         });
     }
 
-    addTorrentByUrl(torrentUrl) {
+    addTorrentByUrl(source) {
         /**
          * Execute transmission-remote command on current container
          * Shows stream on stdout and when streaming ends it resolves
+         * @param {string} source Either an url or a .torrent file
          */
         return new Promise((resolve,reject) => {
             this.currentContainer.exec(
-            {Cmd:['transmission-remote','-a',`${torrentUrl}`],
+            {Cmd:['transmission-remote','-a',`${source}`],
              AttachStdin:true,
              AttachStdout:true},
             (error, exec)=>{
