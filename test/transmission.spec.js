@@ -34,7 +34,8 @@ if (process.env.URL) {
 const sampleUrl = 'http://releases.ubuntu.com/18.04/ubuntu-18.04.4-desktop-amd64.iso.torrent';
 const sampleHash = '286d2e5b4f8369855328336ac1263ae02a7a60d5';
 const tmpFilesDir = 'test/tmp';
-const torrentPath = path.resolve(tmpFilesDir, path.basename(sampleUrl));
+const torrentName = path.basename(sampleUrl);
+const torrentPath = path.resolve(tmpFilesDir,torrentName);
 
 function setupEnvironment() {
     /**
@@ -147,28 +148,33 @@ describe('transmission', () => {
         });
     });
     describe('methods',function() {
+        
         describe('#get', function() {
             this.timeout(30000);
-            it('returns an array', done => {
+            let methodResponse;
+            before(function(done) {
                 transmission.get()
-                    .then(r => {
-                        expect(r.torrents).to.be.an('array');
-                        done()
-                    }).catch(done)
+                    .then(response => {
+                        methodResponse = response;
+                        done();
+                    })
+                    .catch(done);
+            });
+            it('returns an array', done => {
+                expect(methodResponse.torrents).to.be.an('array');
+                done();
             });
 
             it('returns current amount of torrents', done => {
                 // currently it should be one torrent(the sample one)
-                transmission.get().then(r => {
-                    expect(r.torrents.length).to.equal(1);
-                    done()
-                }).catch(done)
+                expect(methodResponse.torrents.length).to.equal(1);
+                done();
             })
 
             it.skip('returns all torrent props in current spec', done => {
                 //@TODO Should return all props in current spec
             });
-
+            // TODO: call get with fields and test it returns
             it.skip('returns only specified fields in get call', done => {}) 
             
 
@@ -183,7 +189,6 @@ describe('transmission', () => {
                         return transmission.get();
                     })
                     .then(response => {
-                        console.log(response);
                         expect(response.torrents.length).to.equal(0);
                         done();
                     })
@@ -193,17 +198,18 @@ describe('transmission', () => {
             // TODO
             it.skip('Can fully remove(local data included)', done => {})
         });// <- #remove
-        describe('#addFile', function() {
+
+        describe('#add', function() {
             // after each test is performed remove the added torrent
             // from tranmission.
             // Note: remove method should work (tested above)
+            // TODO: move internal logic to a function
             afterEach(done => {
                 transmission.get().then(res => {
                     async.each(res.torrents, (torrent, callback) => {
                         if (torrent.hashString !== sampleHash) {
                             return callback();
                         }
-                        
                         transmission.remove(torrent.id, true).then(() => done());
                     });
                 },
@@ -211,27 +217,42 @@ describe('transmission', () => {
                     done(err);
                 });
             });
-
-            it.skip('should add torrent from file path', done => {
-                // http.get(sampleUrl, response => {
-                //     const transmission = new Transmission(clientOptions)
-                //     const destination = path.resolve('tmp', path.basename(sampleUrl))
-                //     const writeStream = fs.createWriteStream(destination)
-                //     response.pipe(writeStream)
-                //     response.on('error', done)
-                //     response.on('end', () => {
-                //         transmission.addFile(destination).then(info => {
-                //             if (!info || !info.id) {
-                //                 return done(new Error('Add torrent failure'))
-                //             }
-                //             done()
-                //         }).catch(done)
-                //     })
-                // })
-            })
             
-        })
+            
+            describe('#addFile', function () {
+                const torrentFile = torrentPath;
+                // TODO: it returns what spec says it should
+                it.skip('Returns response as Rpc spec states', done => {})
+                // TODO: add a torrent and check if get returns it.
+                it.skip('Add torrent from file path', done => {})
+                
+            })
+            describe('#addUrl', function() {
+                // same as #addFile
+                const torrentUrl = sampleUrl
+                it.skip('Returns response as Rpc spec states', done => {
+                    transmission.addUrl(torrentUrl)
+                        .then(response => {
+                            // expect(response.id).to.be truthy
+                            done()
+                        })
+                        .catch(done);
+                })
 
+                it.skip('Adds torrent from url', done => {
+
+                    transmission.addUrl(torrentUrl)
+                        .then(response => {
+                            return transmission.get()
+                        })
+                        .then(response => {
+                            expect(response.torrents.length).to.equal(1)
+                            done()
+                        })
+                        .catch(done)
+                })
+            }) //<- #addUrl
+        })
     }); //methods
     
     
